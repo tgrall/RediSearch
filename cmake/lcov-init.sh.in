@@ -3,3 +3,4 @@ exec lcov \
     --directory @PROJECT_BINARY_DIR@ \
     --base-directory @PROJECT_SOURCE_DIR@/src \
     -z
+    --rc lcov_branch_coverage=1

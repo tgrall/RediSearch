@@ -6,8 +6,8 @@ if [ -z "${INFO_FILE}" ]; then
 fi
 
 LCOV=lcov
-${LCOV} -c -d @PROJECT_SOURCE_DIR@ -o ${INFO_FILE}
-${LCOV} -r ${INFO_FILE} -o ${INFO_FILE} \
+${LCOV} -c -d  --rc lcov_branch_coverage=1 @PROJECT_SOURCE_DIR@ -o ${INFO_FILE}
+${LCOV} -r  --rc lcov_branch_coverage=1 ${INFO_FILE} -o ${INFO_FILE} \
     '/Applications/*' \
     '/usr/*' \
     '@PROJECT_SOURCE_DIR@/src/dep/*' \

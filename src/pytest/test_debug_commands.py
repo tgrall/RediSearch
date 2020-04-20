@@ -140,7 +140,7 @@ class TestDebugCommandsLogAssert(object):
         self.env = Env(testName="testing LogAssert command")
         self.env.skipOnCluster()
         self.skipOnRedisVersion("5.0.7")
-
+'''
     def testLogAssert(self):
         result = False
         logfile_name = self.env.cmd('config get logfile')[1]
@@ -150,3 +150,4 @@ class TestDebugCommandsLogAssert(object):
             if (str(line).__contains__('(7 == 42) failed on /home/ariel/redis/RediSearch/src/debug_commads.c:LogAssert')):
                 result = True
         self.env.assertEqual(result, True)
+'''
