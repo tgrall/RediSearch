@@ -510,24 +510,23 @@ def testOptional(env):
     env.assertEqual([3L, 'doc3', 'doc2', 'doc1'], res)
 
 def testExplain(env):
-
     r = env
     env.assertOk(r.execute_command(
         'ft.create', 'idx', 'schema', 'foo', 'text', 'bar', 'numeric', 'sortable'))
     q = '(hello world) "what what" hello|world @bar:[10 100]|@bar:[200 300]'
-    res = r.execute_command('ft.explain', 'idx', q)
+    res = r.execute_command('ft.explain', 'idx', q, 'VERBATIM')
     # print res.replace('\n', '\\n')
     # expected = """INTERSECT {\n  UNION {\n    hello\n    +hello(expanded)\n  }\n  UNION {\n    world\n    +world(expanded)\n  }\n  EXACT {\n    what\n    what\n  }\n  UNION {\n    UNION {\n      hello\n      +hello(expanded)\n    }\n    UNION {\n      world\n      +world(expanded)\n    }\n  }\n  UNION {\n    NUMERIC {10.000000 <= @bar <= 100.000000}\n    NUMERIC {200.000000 <= @bar <= 300.000000}\n  }\n}\n"""
     # expected = """INTERSECT {\n  UNION {\n    hello\n    <HL(expanded)\n    +hello(expanded)\n  }\n  UNION {\n    world\n    <ARLT(expanded)\n    +world(expanded)\n  }\n  EXACT {\n    what\n    what\n  }\n  UNION {\n    UNION {\n      hello\n      <HL(expanded)\n      +hello(expanded)\n    }\n    UNION {\n      world\n      <ARLT(expanded)\n      +world(expanded)\n    }\n  }\n  UNION {\n    NUMERIC {10.000000 <= @bar <= 100.000000}\n    NUMERIC {200.000000 <= @bar <= 300.000000}\n  }\n}\n"""
-    expected = """INTERSECT {\n  UNION {\n    hello\n    +hello(expanded)\n  }\n  UNION {\n    world\n    +world(expanded)\n  }\n  EXACT {\n    what\n    what\n  }\n  UNION {\n    UNION {\n      hello\n      +hello(expanded)\n    }\n    UNION {\n      world\n      +world(expanded)\n    }\n  }\n  UNION {\n    NUMERIC {10.000000 <= @bar <= 100.000000}\n    NUMERIC {200.000000 <= @bar <= 300.000000}\n  }\n}\n"""
+    # expected = """INTERSECT {\n  UNION {\n    hello\n    +hello(expanded)\n  }\n  UNION {\n    world\n    +world(expanded)\n  }\n  EXACT {\n    what\n    what\n  }\n  UNION {\n    UNION {\n      hello\n      +hello(expanded)\n    }\n    UNION {\n      world\n      +world(expanded)\n    }\n  }\n  UNION {\n    NUMERIC {10.000000 <= @bar <= 100.000000}\n    NUMERIC {200.000000 <= @bar <= 300.000000}\n  }\n}\n"""
+    expected = """UNION {\n  INTERSECT {\n    hello\n    world\n    INTERSECT {\n      EXACT {\n        what\n        what\n      }\n      hello\n    }\n  }\n  INTERSECT {\n    world\n    NUMERIC {10.000000 <= @bar <= 100.000000}\n  }\n  NUMERIC {200.000000 <= @bar <= 300.000000}\n}\n"""
     env.assertEqual(res, expected)
-
 
     # expected = ['INTERSECT {', '  UNION {', '    hello', '    <HL(expanded)', '    +hello(expanded)', '  }', '  UNION {', '    world', '    <ARLT(expanded)', '    +world(expanded)', '  }', '  EXACT {', '    what', '    what', '  }', '  UNION {', '    UNION {', '      hello', '      <HL(expanded)', '      +hello(expanded)', '    }', '    UNION {', '      world', '      <ARLT(expanded)', '      +world(expanded)', '    }', '  }', '  UNION {', '    NUMERIC {10.000000 <= @bar <= 100.000000}', '    NUMERIC {200.000000 <= @bar <= 300.000000}', '  }', '}', '']
     if env.is_cluster():
         raise unittest.SkipTest()
-    res = env.cmd('ft.explainCli', 'idx', q)
-    expected = ['INTERSECT {', '  UNION {', '    hello', '    +hello(expanded)', '  }', '  UNION {', '    world', '    +world(expanded)', '  }', '  EXACT {', '    what', '    what', '  }', '  UNION {', '    UNION {', '      hello', '      +hello(expanded)', '    }', '    UNION {', '      world', '      +world(expanded)', '    }', '  }', '  UNION {', '    NUMERIC {10.000000 <= @bar <= 100.000000}', '    NUMERIC {200.000000 <= @bar <= 300.000000}', '  }', '}', '']
+    res = env.cmd('ft.explainCli', 'idx', q, 'VERBATIM')
+    expected = ['UNION {', '  INTERSECT {', '    hello', '    world', '    INTERSECT {', '      EXACT {', '        what', '        what', '      }', '      hello', '    }', '  }', '  INTERSECT {', '    world', '    NUMERIC {10.000000 <= @bar <= 100.000000}', '  }', '  NUMERIC {200.000000 <= @bar <= 300.000000}', '}', '']
     env.assertEqual(expected, res)
 
 def testNoIndex(env):
@@ -2997,3 +2996,54 @@ def testIssue1169(env):
     env.cmd('FT.ADD idx doc1 1.0 FIELDS txt1 foo')
 
     env.expect('FT.AGGREGATE idx foo GROUPBY 1 @txt1 REDUCE FIRST_VALUE 1 @txt2 as test').equal([1L, ['txt1', 'foo', 'test', None]])
+
+def testIssue1190(env):
+    # parentheses change parser order
+    env.cmd('FT.CREATE', 'idx', 'SCHEMA', 'txt', 'TEXT')
+    env.cmd('FT.ADD', 'idx', 'doc1', '1', 'FIELD', 'txt', 'foo bar')
+    env.cmd('FT.ADD', 'idx', 'doc2', '1', 'FIELD', 'txt', 'foo baz')
+    env.cmd('FT.ADD', 'idx', 'doc3', '1', 'FIELD', 'txt', 'foo waldo')
+
+    res = env.cmd('FT.SEARCH', 'idx', 'bar foo|baz')
+    env.expect('FT.SEARCH', 'idx', '(bar foo)|baz').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar foo)|(baz)').equal(res)
+    env.expect('FT.SEARCH', 'idx', 'bar foo|(baz)').equal(res)
+    env.expect('FT.SEARCH', 'idx', 'bar (foo)|baz').equal(res)
+    env.expect('FT.SEARCH', 'idx', 'bar (foo)|(baz)').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar) foo|baz').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar) foo|(baz)').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar) (foo)|baz').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar) (foo)|(baz)').equal(res)
+
+    res = env.cmd('FT.EXPLAIN', 'idx', 'bar foo|baz' , 'VERBATIM')
+    env.expect('FT.EXPLAIN', 'idx', '(bar foo)|baz'  , 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', '(bar foo)|(baz)', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar foo|(baz)'  , 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar (foo)|baz'  , 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar (foo)|(baz)', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', '(bar) foo|baz'  , 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', '(bar) foo|(baz)', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', '(bar) (foo)|baz', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', '(bar) (foo)|(baz)', 'VERBATIM').equal(res)
+    #'''
+    res = env.cmd('FT.SEARCH', 'idx', 'bar foo|baz waldo')
+    env.expect('FT.SEARCH', 'idx', '(bar foo)|(baz waldo)').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar foo)|baz waldo').equal(res)
+    env.expect('FT.SEARCH', 'idx', 'bar foo|(baz waldo)').equal(res)
+    env.expect('FT.SEARCH', 'idx', '(bar foo)|(baz waldo)').equal(res)
+
+    # these two should be identical
+    #res = env.cmd('FT.EXPLAIN', 'idx', 'bar foo|baz waldo')
+    res = env.cmd('FT.EXPLAIN', 'idx', '(bar foo)|(baz waldo)', 'VERBATIM')
+    env.expect('FT.EXPLAIN', 'idx', 'bar foo|baz waldo', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar foo | baz waldo', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', '(bar) foo|baz waldo', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar (foo)|baz waldo', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar foo|(baz) waldo', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar foo|baz (waldo)', 'VERBATIM').equal(res)
+
+    res = env.cmd('FT.EXPLAIN', 'idx', 'bar|foo baz|waldo', 'VERBATIM')
+    env.expect('FT.EXPLAIN', 'idx', 'bar|foo baz|waldo', 'VERBATIM').equal(res)
+    env.expect('FT.EXPLAIN', 'idx', 'bar|(foo baz)|waldo', 'VERBATIM').equal(res)
+    #'''
+

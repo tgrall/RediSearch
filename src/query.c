@@ -877,7 +877,6 @@ int QAST_Expand(QueryAST *q, const char *expander, RSSearchOptions *opts, RedisS
     return REDISMODULE_ERR;
   }
   return REDISMODULE_OK;
-  ;
 }
 
 /* Set the field mask recursively on a query node. This is called by the parser to handle
@@ -1161,7 +1160,7 @@ static int QueryNode_ApplyAttribute(QueryNode *qn, QueryAttribute *attr, QueryEr
       qn->opts.phonetic = PHONETIC_ENABLED;  // means we specifically asked for phonetic matching
     } else {
       qn->opts.phonetic =
-          PHONETIC_DESABLED;  // means we specifically asked no for phonetic matching
+          PHONETIC_DISABLED;  // means we specifically asked no for phonetic matching
     }
     // qn->opts.noPhonetic = PHONETIC_DEFAULT -> means no special asks regarding phonetics
     //                                          will be enable if field was declared phonetic

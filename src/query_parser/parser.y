@@ -8,17 +8,16 @@
 %left STOPWORD.
 
 %left TERMLIST.
-%left TERM. 
 %left PREFIX.
 %left PERCENT.
-%left ATTRIBUTE.
+
+%left OR ORX AND.
 %right LP.
 %left RP.
 // needs to be above lp/rp
+%left TERM. 
+%left ATTRIBUTE.
 %left MODIFIER.
-%left AND.
-%left OR.
-%left ORX.
 %left ARROW.
 
 %token_type {QueryToken}  
