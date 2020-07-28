@@ -18,7 +18,7 @@
 #include "rmutil/rm_assert.h"
 
 #ifdef COVERAGE
-#include <gcov.h>
+extern void __gcov_flush (void);
 #endif
 
 #ifdef __linux__
