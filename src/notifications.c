@@ -15,25 +15,28 @@ int HashNotificationCallback(RedisModuleCtx *ctx, int type, const char *event, R
     E##_event = event; \
   }
 
-  static const char *hset_event = 0, *hmset_event = 0, *del_event = 0, *hdel_event = 0;
-  bool hset = false, hmset = false, del = false, hdel = false;
+  static const char *hset_event = 0, *hmset_event = 0, *del_event = 0, *hdel_event = 0, *set_event = 0;
+  bool hset = false, hmset = false, del = false, hdel = false, set = false;
 
        CHECK_CACHED_EVENT(hset)
   else CHECK_CACHED_EVENT(hmset)
   else CHECK_CACHED_EVENT(del)
   else CHECK_CACHED_EVENT(hdel)
+  else CHECK_CACHED_EVENT(set)
   else {
          CHECK_AND_CACHE_EVENT(hset)
     else CHECK_AND_CACHE_EVENT(hmset)
     else CHECK_AND_CACHE_EVENT(del)
     else CHECK_AND_CACHE_EVENT(hdel)
+    else CHECK_AND_CACHE_EVENT(set)
   }
 
   const char *key_cp = RedisModule_StringPtrLen(key, NULL);
   if (hset || hmset || hdel) {
     Indexes_UpdateMatchingWithSchemaRules(ctx, key);
   }
-  if (del) {
+  if (del || set) {
+    printf("Set/Del\n");
     Indexes_DeleteMatchingWithSchemaRules(ctx, key);
   }
 
@@ -41,6 +44,7 @@ int HashNotificationCallback(RedisModuleCtx *ctx, int type, const char *event, R
 }
 
 void Initialize_KeyspaceNotifications(RedisModuleCtx *ctx) {
-  RedisModule_SubscribeToKeyspaceEvents(ctx, REDISMODULE_NOTIFY_GENERIC | REDISMODULE_NOTIFY_HASH,
-                                        HashNotificationCallback);
+  RedisModule_SubscribeToKeyspaceEvents(ctx,
+    REDISMODULE_NOTIFY_GENERIC | REDISMODULE_NOTIFY_HASH | REDISMODULE_NOTIFY_STRING,
+    HashNotificationCallback);
 }
