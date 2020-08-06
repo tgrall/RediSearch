@@ -417,7 +417,8 @@ void IndexSpec_InitializeSynonym(IndexSpec *sp);
 void Indexes_Init(RedisModuleCtx *ctx);
 void Indexes_UpdateMatchingWithSchemaRules(RedisModuleCtx *ctx, RedisModuleString *key);
 void Indexes_DeleteMatchingWithSchemaRules(RedisModuleCtx *ctx, RedisModuleString *key);
-
+void Indexes_ReplaceMatchingWithSchemaRules(RedisModuleCtx *ctx, RedisModuleString *from_key, 
+                                                                 RedisModuleString *to_key);
 #ifdef __cplusplus
 }
 #endif
