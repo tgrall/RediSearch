@@ -79,6 +79,7 @@ def testAllConfig(env):
     env.assertEqual(res_dict['MINPREFIX'][0], '2')
     env.assertEqual(res_dict['FORKGC_SLEEP_BEFORE_EXIT'][0], '0')
     env.assertEqual(res_dict['MAXDOCTABLESIZE'][0], '1000000')
+    env.assertEqual(res_dict['MAXSEARCHRESULTS'][0], '1000000')
     env.assertEqual(res_dict['MAXEXPANSIONS'][0], '200')
     env.assertEqual(res_dict['TIMEOUT'][0], '500')
     env.assertEqual(res_dict['INDEX_THREADS'][0], '8')
@@ -87,8 +88,8 @@ def testAllConfig(env):
     env.assertEqual(res_dict['ON_TIMEOUT'][0], 'return')
     env.assertEqual(res_dict['GCSCANSIZE'][0], '100')
     env.assertEqual(res_dict['MIN_PHONETIC_TERM_LEN'][0], '3')
-    env.assertEqual(res_dict['FORK_GC_RUN_INTERVAL'][0], '10')
-    env.assertEqual(res_dict['FORK_GC_CLEAN_THRESHOLD'][0], '0')
+    env.assertEqual(res_dict['FORK_GC_RUN_INTERVAL'][0], '30')
+    env.assertEqual(res_dict['FORK_GC_CLEAN_THRESHOLD'][0], '100')
     env.assertEqual(res_dict['FORK_GC_RETRY_INTERVAL'][0], '5')
     env.assertEqual(res_dict['CURSOR_MAX_IDLE'][0], '300000')
     env.assertEqual(res_dict['NO_MEM_POOLS'][0], 'false')
@@ -149,3 +150,7 @@ def testInitConfig(env):
     test_arg_str('GC_POLICY', 'default', 'fork')
     test_arg_str('GC_POLICY', 'legacy', 'sync')
     test_arg_str('ON_TIMEOUT', 'fail')
+    test_arg_str('MAXSEARCHRESULTS', '100', '100')
+    test_arg_str('MAXSEARCHRESULTS', '-1', '18446744073709551615')
+
+    
