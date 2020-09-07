@@ -35,9 +35,7 @@ typedef struct {
 
   double unique_sum;
 
-  u_int16_t card;
   uint32_t splitCard;
-  CardinalityValue *values;
   InvertedIndex *entries;
 } NumericRange;
 
@@ -86,7 +84,7 @@ struct indexIterator *NewNumericFilterIterator(RedisSearchCtx *ctx, const Numeri
 /* Add an entry to a numeric range node. Returns the cardinality of the range after the
  * inserstion.
  * No deduplication is done */
-size_t NumericRange_Add(NumericRange *r, t_docId docId, double value, int checkCard);
+size_t NumericRange_Add(NumericRange *r, t_docId docId, double value);
 
 /* Split n into two ranges, lp for left, and rp for right. We split by an average (??) score */
 double NumericRange_Split(NumericRange *n, NumericRangeNode **lp, NumericRangeNode **rp);

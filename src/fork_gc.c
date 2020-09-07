@@ -844,66 +844,12 @@ error:
   return FGC_CHILD_ERROR;
 }
 
-static void resetCardinality(NumGcInfo *info, NumericRangeNode *currNone) {
-  khash_t(cardvals) *kh = kh_init(cardvals);
-  int added;
-  for (size_t ii = 0; ii < info->nrestBlockDel; ++ii) {
-    numUnion u = {info->restBlockDeleted[ii].value};
-    khiter_t it = kh_put(cardvals, kh, u.u64, &added);
-    kh_val(kh, it) = info->restBlockDeleted[ii].appearances;
-  }
-  if (!info->idxbufs.lastBlockIgnored) {
-    for (size_t ii = 0; ii < info->nlastBlockDel; ++ii) {
-      numUnion u = {info->lastBlockDeleted[ii].value};
-      khiter_t it = kh_put(cardvals, kh, u.u64, &added);
-      if (!added) {
-        kh_val(kh, it) += info->lastBlockDeleted[ii].appearances;
-      } else {
-        kh_val(kh, it) = info->lastBlockDeleted[ii].appearances;
-      }
-    }
-  }
-
-  NumericRange *r = currNone->range;
-  size_t n = array_len(r->values);
-  double minVal = DBL_MAX, maxVal = -DBL_MIN, uniqueSum = 0;
-
-  for (size_t ii = 0; ii < array_len(r->values); ++ii) {
-  reeval:;
-    numUnion u = {r->values[ii].value};
-    khiter_t it = kh_get(cardvals, kh, u.u64);
-    if (it != kh_end(kh) && (r->values[ii].appearances -= kh_val(kh, it)) == 0) {
-      // delete this
-      size_t isLast = array_len(r->values) == ii + 1;
-      array_del_fast(r->values, ii);
-      if (!isLast) {
-        goto reeval;
-      }
-    } else {
-      minVal = MIN(minVal, r->values[ii].value);
-      maxVal = MAX(maxVal, r->values[ii].value);
-      uniqueSum += r->values[ii].value;
-    }
-  }
-  kh_destroy(cardvals, kh);
-  // we can only update the min and the max value if the node is a leaf.
-  // otherwise the min and the max also represent its children values and
-  // we can not change it.
-  if (NumericRangeNode_IsLeaf(currNone)) {
-    r->minVal = minVal;
-    r->maxVal = maxVal;
-  }
-  r->unique_sum = uniqueSum;
-  r->card = array_len(r->values);
-}
-
 static void applyNumIdx(ForkGC *gc, RedisSearchCtx *sctx, NumGcInfo *ninfo) {
   NumericRangeNode *currNode = ninfo->node;
   InvIdxBuffers *idxbufs = &ninfo->idxbufs;
   MSG_IndexInfo *info = &ninfo->info;
   FGC_applyInvertedIndex(gc, idxbufs, info, currNode->range->entries);
   FGC_updateStats(sctx, gc, info->ndocsCollected, info->nbytesCollected);
-  resetCardinality(ninfo, currNode);
 }
 
 static FGCError FGC_parentHandleNumeric(ForkGC *gc, RedisModuleCtx *rctx) {

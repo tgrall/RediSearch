@@ -42,7 +42,6 @@ static inline int NumericRange_Contained(NumericRange *n, double min, double max
 /* Free Numeric range */
 static void NumericRange_Free(NumericRange *range) {
   InvertedIndex_Free(range->entries);
-  array_free(range->values);
   rm_free(range);
 }
 
@@ -62,36 +61,15 @@ int NumericRange_Overlaps(NumericRange *n, double min, double max) {
   return rc;
 }
 
-size_t NumericRange_Add(NumericRange *n, t_docId docId, double value, int checkCard) {
-  int add = 0;
-  if (checkCard) {
-    add = 1;
-    size_t card = n->card;
-    for (int i = 0; i < array_len(n->values); i++) {
-
-      if (n->values[i].value == value) {
-        add = 0;
-        n->values[i].appearances++;
-        break;
-      }
-    }
-  }
+size_t NumericRange_Add(NumericRange *n, t_docId docId, double value) {
   if (n->minVal == NF_NEGATIVE_INFINITY || value < n->minVal) n->minVal = value;
   if (n->maxVal == NF_INFINITY || value > n->maxVal) n->maxVal = value;
-  if (add) {
-    if (n->card < n->splitCard) {
-      CardinalityValue val = {.value = value, .appearances = 1};
-      n->values = array_append(n->values, val);
-      n->unique_sum += value;
-    }
-    ++n->card;
-  }
-
   return InvertedIndex_WriteNumericEntry(n->entries, docId, value);
 }
 
 double NumericRange_Split(NumericRange *n, NumericRangeNode **lp, NumericRangeNode **rp) {
-  double split = (n->unique_sum) / (double)n->card;
+  double split = (n->maxVal + n->minVal) / 2;
+  // TODO: sample 10 values as well
 
   // printf("split point :%f\n", split);
   *lp = NewLeafNode(n->entries->numDocs / 2 + 1, n->minVal, split,
@@ -103,7 +81,7 @@ double NumericRange_Split(NumericRange *n, NumericRangeNode **lp, NumericRangeNo
   IndexReader *ir = NewNumericReader(NULL, n->entries, NULL);
   while (INDEXREAD_OK == IR_Read(ir, &res)) {
     NumericRange_Add(res->num.value < split ? (*lp)->range : (*rp)->range, res->docId,
-                     res->num.value, 1);
+                     res->num.value);
   }
   IR_Free(ir);
 
@@ -127,9 +105,8 @@ NumericRangeNode *NewLeafNode(size_t cap, double min, double max, size_t splitCa
   *n->range = (NumericRange){.minVal = min,
                              .maxVal = max,
                              .unique_sum = 0,
-                             .card = 0,
                              .splitCard = splitCard,
-                             .values = array_new(CardinalityValue, 1),
+                             //.values = array_new(CardinalityValue, 1),
                              //.values = rm_calloc(splitCard, sizeof(CardinalityValue)),
                              .entries = NewInvertedIndex(Index_StoreNumeric, 1)};
   return n;
@@ -172,17 +149,16 @@ NRN_AddRv NumericRangeNode_Add(NumericRangeNode *n, t_docId docId, double value)
   }
 
   // if this node is a leaf - we add AND check the cardinality. We only split leaf nodes
-  rv.sz = (uint32_t)NumericRange_Add(n->range, docId, value, 1);
-  int card = n->range->card;
+  rv.sz = (uint32_t)NumericRange_Add(n->range, docId, value);
   // printf("Added %d %f to node %f..%f, card now %zd, size now %zd\n", docId, value,
   // n->range->minVal,
   //        n->range->maxVal, card, n->range->entries->numDocs);
-  if (card >= n->range->splitCard ||
-      (n->range->entries->numDocs > NR_MAXRANGE_SIZE && card > 1)) {
 
-    // split this node but don't delete its range
+  // got to capacity and more than a single value - split
+  if (n->range->entries->numDocs > NR_MAXRANGE_SIZE && 
+      n->range->maxVal != n->range->minVal) {
     double split = NumericRange_Split(n->range, &n->left, &n->right);
-    // children hold all data. range of parent can be removed
+    // children hold all the data. range of parent can be removed
     NumericRange_Free(n->range);
     n->range = NULL;
 
@@ -471,7 +447,6 @@ void __numericIndex_memUsageCallback(NumericRangeNode *n, void *ctx) {
 
   if (n->range) {
     *sz += sizeof(NumericRange);
-    *sz += n->range->card * sizeof(double);
     if (n->range->entries) {
       *sz += InvertedIndex_MemUsage(n->range->entries);
     }

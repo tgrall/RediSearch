@@ -190,12 +190,12 @@ def testIssue1497(env):
 
 def testBM(env):
   pl = env.getConnection().pipeline()
-  count = 100000
-
+  count = 500000
+  random.seed(hash("Admiral"))
   env.expect('FT.CREATE', 'idx', 'SCHEMA', 'n', 'NUMERIC').ok()
   for i in range(count):
-    pl.execute_command('HSET', 'doc%d' % i, 'n', int(random.random() * count))
-    if i % 1000 == 0:
+    pl.execute_command('HSET', 'doc%d' % i, 'n', float(random.random() * count))
+    if i % 10000 == 0:
       pl.execute()
   pl.execute()
   
