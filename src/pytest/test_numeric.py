@@ -127,7 +127,6 @@ def testMemoryAfterDrop(env):
 
   for i in range(idx_count):
     env.expect('FT.CREATE', 'idx%d' % i, 'PREFIX', 1, '%ddoc' % i, 'SCHEMA', 't', 'TEXT', 'n', 'NUMERIC', 'tg', 'TAG', 'g', 'GEO').ok()
-    print('.'),
   print '\nafter create'
   print_memory_used(env)
 
@@ -136,7 +135,6 @@ def testMemoryAfterDrop(env):
     for j in range(doc_count):
       pl.execute_command('HSET', '%ddoc%d' % (i, j), 't', '%dhello%d' % (i, j), 'tg', '%dworld%d' % (i, j), 'n', i, 'g', geo)
     pl.execute()
-    print('.'),
     d = ft_info_to_dict(env, 'idx%d' % i)
     env.assertEqual(d['num_docs'], str(doc_count))
 
@@ -147,7 +145,6 @@ def testMemoryAfterDrop(env):
     for j in range(doc_count):
       pl.execute_command('DEL', '%ddoc%d' % (i, j))
     pl.execute()
-    print('.'),
     d = ft_info_to_dict(env, 'idx%d' % i)
     env.assertEqual(d['num_docs'], '0')
     for _ in range(10):
@@ -190,3 +187,16 @@ def testIssue1497(env):
   d = {res[i]: res[i + 1] for i in range(0, len(res), 2)}
   env.assertEqual(d['inverted_sz_mb'], '0')
   env.assertEqual(d['num_records'], '0')
+
+def testBM(env):
+  pl = env.getConnection().pipeline()
+  count = 100000
+
+  env.expect('FT.CREATE', 'idx', 'SCHEMA', 'n', 'NUMERIC').ok()
+  for i in range(count):
+    pl.execute_command('HSET', 'doc%d' % i, 'n', int(random.random() * count))
+    if i % 1000 == 0:
+      pl.execute()
+  pl.execute()
+  
+  print_memory_used(env)
