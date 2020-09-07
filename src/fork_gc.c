@@ -873,7 +873,7 @@ static void resetCardinality(NumGcInfo *info, NumericRangeNode *currNone) {
     numUnion u = {r->values[ii].value};
     khiter_t it = kh_get(cardvals, kh, u.u64);
     if (it != kh_end(kh) && (r->values[ii].appearances -= kh_val(kh, it)) == 0) {
-      // delet this
+      // delete this
       size_t isLast = array_len(r->values) == ii + 1;
       array_del_fast(r->values, ii);
       if (!isLast) {
@@ -954,6 +954,7 @@ static FGCError FGC_parentHandleNumeric(ForkGC *gc, RedisModuleCtx *rctx) {
     }
 
     applyNumIdx(gc, sctx, &ninfo);
+    rt->numEntries -= ninfo.info.ndocsCollected;
 
   loop_cleanup:
     if (sctx) {
