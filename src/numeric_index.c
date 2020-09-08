@@ -10,8 +10,8 @@
 #include "util/misc.h"
 //#include "tests/time_sample.h"
 #define NR_EXPONENT 4
-#define NR_MAXRANGE_CARD 2500
-#define NR_MAXRANGE_SIZE 10000
+#define NR_MAXRANGE_CARD 100
+#define NR_MAXRANGE_SIZE 1000
 #define NR_MAX_DEPTH 2
 
 typedef struct {

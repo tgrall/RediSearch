@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import random
+from random import random, seed 
 from includes import *
 from common import getConnectionByEnv, waitForIndex, sortedResults, toSortedFlatList
-from time import sleep
+from time import sleep, time
 from RLTest import Env
 
 ##########################################################################
@@ -19,7 +19,7 @@ def ft_debug_to_dict(env, idx, n):
 
 def print_memory_used(env):
   res = env.execute_command('info', 'memory')
-  print '\nUse memory ' + res['used_memory_human'] + '\n'
+  print 'Use memory ' + res['used_memory_human']
 
 def check_empty(env, idx):
     d = ft_info_to_dict(env, idx)
@@ -190,13 +190,27 @@ def testIssue1497(env):
 
 def testBM(env):
   pl = env.getConnection().pipeline()
-  count = 500000
-  random.seed(hash("Admiral"))
+  count = 1000000
+  search_count = 100000
+  seed(hash("Admiral"))
   env.expect('FT.CREATE', 'idx', 'SCHEMA', 'n', 'NUMERIC').ok()
+  start_time = time()
   for i in range(count):
-    pl.execute_command('HSET', 'doc%d' % i, 'n', float(random.random() * count))
+    pl.execute_command('HSET', 'doc%d' % i, 'n', int(random() * count) / 1000)
     if i % 10000 == 0:
       pl.execute()
   pl.execute()
   
+  end_time = time()
+  print "HSET took " + str(end_time - start_time)
+  start_time = end_time
+
   print_memory_used(env)
+  
+  for i in range(search_count):
+    env.expect('ft.search', 'idx', '@score:['+str(random() * count / 1000)+str(random() * count)+'+]', "nocontent")
+
+
+  end_time = time()
+  print "SEARCH took " + str(end_time - start_time)
+  start_time = end_time
