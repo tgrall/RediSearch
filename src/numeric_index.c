@@ -72,10 +72,8 @@ double NumericRange_Split(NumericRange *n, NumericRangeNode **lp, NumericRangeNo
   // TODO: sample 10 values as well
 
   // printf("split point :%f\n", split);
-  *lp = NewLeafNode(n->entries->numDocs / 2 + 1, n->minVal, split,
-                    MIN(NR_MAXRANGE_CARD, 1 + n->splitCard * NR_EXPONENT));
-  *rp = NewLeafNode(n->entries->numDocs / 2 + 1, split, n->maxVal,
-                    MIN(NR_MAXRANGE_CARD, 1 + n->splitCard * NR_EXPONENT));
+  *lp = NewLeafNode(n->entries->numDocs / 2 + 1, n->minVal, split);
+  *rp = NewLeafNode(n->entries->numDocs / 2 + 1, split, n->maxVal);
 
   RSIndexResult *res = NULL;
   IndexReader *ir = NewNumericReader(NULL, n->entries, NULL);
@@ -92,8 +90,7 @@ double NumericRange_Split(NumericRange *n, NumericRangeNode **lp, NumericRangeNo
   return split;
 }
 
-NumericRangeNode *NewLeafNode(size_t cap, double min, double max, size_t splitCard) {
-
+NumericRangeNode *NewLeafNode(size_t cap, double min, double max) {
   NumericRangeNode *n = rm_malloc(sizeof(NumericRangeNode));
   n->left = NULL;
   n->right = NULL;
@@ -105,9 +102,6 @@ NumericRangeNode *NewLeafNode(size_t cap, double min, double max, size_t splitCa
   *n->range = (NumericRange){.minVal = min,
                              .maxVal = max,
                              .unique_sum = 0,
-                             .splitCard = splitCard,
-                             //.values = array_new(CardinalityValue, 1),
-                             //.values = rm_calloc(splitCard, sizeof(CardinalityValue)),
                              .entries = NewInvertedIndex(Index_StoreNumeric, 1)};
   return n;
 }
@@ -237,7 +231,7 @@ NumericRangeTree *NewNumericRangeTree() {
 #define GC_NODES_INITIAL_SIZE 10
   NumericRangeTree *ret = rm_malloc(sizeof(NumericRangeTree));
 
-  ret->root = NewLeafNode(2, NF_NEGATIVE_INFINITY, NF_INFINITY, 2);
+  ret->root = NewLeafNode(2, NF_NEGATIVE_INFINITY, NF_INFINITY);
   ret->numEntries = 0;
   ret->numRanges = 1;
   ret->revisionId = 0;
@@ -247,7 +241,6 @@ NumericRangeTree *NewNumericRangeTree() {
 }
 
 size_t NumericRangeTree_Add(NumericRangeTree *t, t_docId docId, double value) {
-
   // Do not allow duplicate entries. This might happen due to indexer bugs and we need to protect
   // from it
   if (docId <= t->lastDocId) {

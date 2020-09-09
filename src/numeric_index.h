@@ -33,7 +33,6 @@ typedef struct {
 
   double unique_sum;
 
-  uint32_t splitCard;
   InvertedIndex *entries;
 } NumericRange;
 
@@ -88,7 +87,7 @@ size_t NumericRange_Add(NumericRange *r, t_docId docId, double value);
 double NumericRange_Split(NumericRange *n, NumericRangeNode **lp, NumericRangeNode **rp);
 
 /* Create a new range node with the given capacity, minimum and maximum values */
-NumericRangeNode *NewLeafNode(size_t cap, double min, double max, size_t splitCard);
+NumericRangeNode *NewLeafNode(size_t cap, double min, double max);
 
 /* Add a value to a tree node or its children recursively. Splits the relevant node if needed.
  * Returns 0 if no nodes were split, 1 if we splitted nodes */
